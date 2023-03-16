@@ -2,31 +2,38 @@ import numpy as np
 import cv2
 import pytesseract
 import deepl
+import pynput
 import PIL.ImageGrab
 
-from config import DEEPL_KEY
+from config import DEEPL_KEY, HOTKEY
 
-img = np.array(PIL.ImageGrab.grab())
+def on_hotkey():
 
-coords = cv2.selectROI('select', img, False)
-cv2.destroyWindow('select')
+    img = np.array(PIL.ImageGrab.grab())
 
-x, y, w, h = coords
-roi = img[y:y+h, x:x+w]
+    coords = cv2.selectROI('select', img, False)
+    cv2.destroyWindow('select')
 
-#cv2.imshow('roi', roi)
-#cv2.waitKey(0)
-#cv2.destroyAllWindows()
+    x, y, w, h = coords
+    roi = img[y:y+h, x:x+w]
 
-
-text = pytesseract.image_to_string(roi, lang='eng')
-print(text)
-
-text_clean = text.replace('\n', ' ')
+    #cv2.imshow('roi', roi)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
 
 
-translator = deepl.Translator(DEEPL_KEY)
-result = translator.translate_text(text_clean, target_lang='DE')
-print(f'Translated: {result.text}')
+    text = pytesseract.image_to_string(roi, lang='eng')
+    print(text)
+
+    text_clean = text.replace('\n', ' ')
 
 
+    translator = deepl.Translator(DEEPL_KEY)
+    result = translator.translate_text(text_clean, target_lang='DE')
+    print(f'Translated: {result.text}')
+
+
+print(HOTKEY)
+
+with pynput.keyboard.GlobalHotKeys({HOTKEY: on_hotkey}) as h:
+    h.join()
