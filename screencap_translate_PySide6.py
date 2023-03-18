@@ -11,6 +11,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setup_ui()
 
+        self.ocr_text = ''
+
     def setup_ui(self):
         self.setWindowTitle("Image Region Selector")
         self.central_widget = QWidget()
@@ -107,6 +109,10 @@ class MainWindow(QMainWindow):
         self.scene.setSceneRect(QRectF(pixmap.rect()))
         self.graphics_view.fitInView(self.image_item, Qt.KeepAspectRatio)
 
+    def update_ocr_text(self, text):
+        self.ocr_text = text
+        self.ocr_widget.setPlainText(self.ocr_text)
+
 
 class CustomGraphicsView(QGraphicsView):
     def __init__(self, parent=None):
@@ -142,9 +148,8 @@ class CustomGraphicsView(QGraphicsView):
         selected_image = self.parent().parent().image_item.pixmap()
         roi = selected_image.copy(self.selection_rect.toAlignedRect())
         image = ImageQt.fromqpixmap(roi)  # Convert to PIL image that is compatible with tesseract
-        extracted_text = ocr_text(image)
-        print(extracted_text)
-        import ipdb; ipdb.set_trace()
+        extracted_text = ocr_text(image, to_lang='eng', config=r'--psm 6')
+        self.parent().parent().update_ocr_text(extracted_text)
 
 
 
