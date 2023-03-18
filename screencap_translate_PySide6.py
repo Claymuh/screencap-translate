@@ -1,7 +1,7 @@
 import sys
 from PySide6.QtCore import Qt, QRectF, QPointF, QLineF
 from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform
-from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, QMenuBar, QFileDialog, QGraphicsPixmapItem
+from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -52,11 +52,39 @@ class MainWindow(QMainWindow):
 
         self.zoom_slider.valueChanged.connect(self.set_zoom)
 
+        # Set up OCR text edit widget
+        self.ocr_widget = QPlainTextEdit(self.central_widget)
+        self.ocr_widget.setReadOnly(True)
+        
+        # Set up translated text edit widget
+        self.translated_widget = QPlainTextEdit(self.central_widget)
+        self.translated_widget.setReadOnly(True)
+
+        # set up labels
+        self.ocr_label = QLabel("OCRed text")
+        self.translated_label = QLabel("Translated text")
+
+        # Set up translate button
+        self.translate_button = QPushButton("Translate!", self)
+
         # Layout of the image view
-        layout = QVBoxLayout()
-        layout.addWidget(self.graphics_view)
-        layout.addWidget(self.zoom_slider)
-        self.central_widget.setLayout(layout)
+        layout_img_view = QVBoxLayout()
+        layout_img_view.addWidget(self.graphics_view)
+        layout_img_view.addWidget(self.zoom_slider)
+
+        # Layout of the side bar
+        layout_side = QVBoxLayout()
+        layout_side.addWidget(self.ocr_label)
+        layout_side.addWidget(self.ocr_widget)
+        layout_side.addWidget(self.translate_button)
+        layout_side.addWidget(self.translated_label)
+        layout_side.addWidget(self.translated_widget)
+
+        # High-level leyout
+        main_layout = QHBoxLayout()
+        main_layout.addLayout(layout_img_view)
+        main_layout.addLayout(layout_side)
+        self.central_widget.setLayout(main_layout)
 
 
     def set_zoom(self, value):
@@ -74,6 +102,7 @@ class MainWindow(QMainWindow):
         pixmap = QPixmap(file_path)
         self.image_item.setPixmap(pixmap)
         self.scene.setSceneRect(QRectF(pixmap.rect()))
+        self.graphics_view.fitInView(self.image_item, Qt.KeepAspectRatio)
 
 
 class CustomGraphicsView(QGraphicsView):
@@ -108,7 +137,7 @@ class CustomGraphicsView(QGraphicsView):
 if __name__ == "__main__":
     app = QApplication([])
     window = MainWindow()
-    window.resize(800, 600)
+    window.resize(1200, 600)
     window.show()
     try:
         app.exec()
