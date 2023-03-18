@@ -1,7 +1,7 @@
 import sys
 from PySide6.QtCore import Qt, QRectF, QPointF, QLineF
 from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform
-from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton
+from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter
 from PIL import ImageQt
 
 from lib.ocr import ocr_text
@@ -73,12 +73,14 @@ class MainWindow(QMainWindow):
         self.translate_button = QPushButton("Translate!", self)
 
         # Layout of the image view
-        layout_img_view = QVBoxLayout()
+        widget_img_view = QWidget()
+        layout_img_view = QVBoxLayout(widget_img_view)
         layout_img_view.addWidget(self.graphics_view)
         layout_img_view.addWidget(self.zoom_slider)
 
         # Layout of the side bar
-        layout_side = QVBoxLayout()
+        widget_side = QWidget()
+        layout_side = QVBoxLayout(widget_side)
         layout_side.addWidget(self.ocr_label)
         layout_side.addWidget(self.ocr_widget)
         layout_side.addWidget(self.translate_button)
@@ -86,9 +88,11 @@ class MainWindow(QMainWindow):
         layout_side.addWidget(self.translated_widget)
 
         # High-level leyout
-        main_layout = QHBoxLayout()
-        main_layout.addLayout(layout_img_view)
-        main_layout.addLayout(layout_side)
+        splitter_main = QSplitter()
+        splitter_main.addWidget(widget_img_view)
+        splitter_main.addWidget(widget_side)
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(splitter_main)
         self.central_widget.setLayout(main_layout)
 
 
@@ -145,11 +149,11 @@ class CustomGraphicsView(QGraphicsView):
             painter.drawRect(self.selection_rect)
 
     def ocr_selection(self, rect):
-        selected_image = self.parent().parent().image_item.pixmap()
-        roi = selected_image.copy(self.selection_rect.toAlignedRect())
+        selected_image = self.topLevelWidget().image_item.pixmap()
+        roi = selected_image.copy(rect.toAlignedRect())
         image = ImageQt.fromqpixmap(roi)  # Convert to PIL image that is compatible with tesseract
         extracted_text = ocr_text(image, to_lang='eng', config=r'--psm 6')
-        self.parent().parent().update_ocr_text(extracted_text)
+        self.topLevelWidget().update_ocr_text(extracted_text)
 
 
 
