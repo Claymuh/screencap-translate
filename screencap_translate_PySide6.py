@@ -2,6 +2,9 @@ import sys
 from PySide6.QtCore import Qt, QRectF, QPointF, QLineF
 from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform
 from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton
+from PIL import ImageQt
+
+from lib.ocr import ocr_text
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -55,7 +58,7 @@ class MainWindow(QMainWindow):
         # Set up OCR text edit widget
         self.ocr_widget = QPlainTextEdit(self.central_widget)
         self.ocr_widget.setReadOnly(True)
-        
+
         # Set up translated text edit widget
         self.translated_widget = QPlainTextEdit(self.central_widget)
         self.translated_widget.setReadOnly(True)
@@ -126,6 +129,7 @@ class CustomGraphicsView(QGraphicsView):
                 self.scene().removeItem(self.selection_item)
             pen = QPen(Qt.red, 2)
             self.selection_item = self.scene().addRect(self.selection_rect, pen)
+            self.ocr_selection(self.selection_rect)
             self.selection_rect = None
 
     def drawForeground(self, painter, rect):
@@ -133,6 +137,16 @@ class CustomGraphicsView(QGraphicsView):
             pen = QPen(Qt.red, 2)
             painter.setPen(pen)
             painter.drawRect(self.selection_rect)
+
+    def ocr_selection(self, rect):
+        selected_image = self.parent().parent().image_item.pixmap()
+        roi = selected_image.copy(self.selection_rect.toAlignedRect())
+        image = ImageQt.fromqpixmap(roi)  # Convert to PIL image that is compatible with tesseract
+        extracted_text = ocr_text(image)
+        print(extracted_text)
+        import ipdb; ipdb.set_trace()
+
+
 
 if __name__ == "__main__":
     app = QApplication([])
