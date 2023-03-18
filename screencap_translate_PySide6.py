@@ -4,7 +4,10 @@ from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTra
 from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter
 from PIL import ImageQt
 
-from lib.ocr import ocr_text
+from st.ocr import ocr_text
+from st.translate import translate_text_deepl
+
+from config import DEEPL_KEY
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -71,6 +74,7 @@ class MainWindow(QMainWindow):
 
         # Set up translate button
         self.translate_button = QPushButton("Translate!", self)
+        self.translate_button.clicked.connect(self.translate_text)
 
         # Layout of the image view
         widget_img_view = QWidget()
@@ -95,7 +99,6 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(splitter_main)
         self.central_widget.setLayout(main_layout)
 
-
     def set_zoom(self, value):
         factor = value / 100
         self.graphics_view.setTransform(QTransform.fromScale(factor, factor))
@@ -116,6 +119,10 @@ class MainWindow(QMainWindow):
     def update_ocr_text(self, text):
         self.ocr_text = text
         self.ocr_widget.setPlainText(self.ocr_text)
+
+    def translate_text(self):
+        translated_text = translate_text_deepl(self.ocr_text, DEEPL_KEY)
+        self.translated_widget.setPlainText(translated_text)
 
 
 class CustomGraphicsView(QGraphicsView):
