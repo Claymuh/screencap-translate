@@ -124,7 +124,7 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout()
         main_layout.addWidget(splitter_main)
         self.central_widget.setLayout(main_layout)
-        
+
     def set_up_hotkeys(self):
         # TODO: Make hotkeys customizable
         with keyboard.GlobalHotKeys(
@@ -155,6 +155,14 @@ class MainWindow(QMainWindow):
         self.image_item.setPixmap(pixmap)
         self.scene.setSceneRect(QRectF(pixmap.rect()))
         self.graphics_view.fitInView(self.image_item, Qt.KeepAspectRatio)
+        # Get window into the foreground and focus, then reset status to be able to repeat this process
+        old_flags = self.windowFlags()
+        self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+        self.setWindowState(Qt.WindowState.WindowActive)
+        self.show()  # Applies new flags
+        self.setWindowFlags(old_flags)
+        self.setWindowState(Qt.WindowState.WindowNoState)
+        self.show()
 
     def update_ocr_text(self, text):
         self.ocr_text = text
