@@ -155,6 +155,9 @@ class MainWindow(QMainWindow):
         self.image_item.setPixmap(pixmap)
         self.scene.setSceneRect(QRectF(pixmap.rect()))
         self.graphics_view.fitInView(self.image_item, Qt.KeepAspectRatio)
+        self.bring_to_foreground()
+
+    def bring_to_foreground(self):
         # Get window into the foreground and focus, then reset status to be able to repeat this process
         old_flags = self.windowFlags()
         self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
