@@ -1,7 +1,7 @@
 import sys
 from PySide6.QtCore import Qt, QRectF, QPointF, QLineF
-from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform
-from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter
+from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen
+from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter, QComboBox
 from PIL import ImageQt
 
 from st.ocr import ocr_text
@@ -12,6 +12,7 @@ from config import DEEPL_KEY
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.screen_list = QApplication.screens()
         self.setup_ui()
 
         self.ocr_text = ''
@@ -38,6 +39,15 @@ class MainWindow(QMainWindow):
         self.open_image_action.setShortcut("Ctrl+O")
         self.open_image_action.triggered.connect(self.open_image)
         self.file_menu.addAction(self.open_image_action)
+
+        # Set up screen select ComboBox
+        self.screen_select_label = QLabel("Screen")
+        self.screen_select_box = QComboBox(self)
+        self.screen_select_box.addItems(map(lambda x: x.name(), self.screen_list))
+
+        # Set up screenshot button
+        self.screenshot_button = QPushButton("Take Screenhot", self)
+        self.screenshot_button.clicked.connect(self.take_screenshot)
 
         # Set up image display widget
         self.image = QPixmap()
@@ -77,8 +87,13 @@ class MainWindow(QMainWindow):
         self.translate_button.clicked.connect(self.translate_text)
 
         # Layout of the image view
+        layout_img_view_top = QHBoxLayout()
+        layout_img_view_top.addWidget(self.screen_select_label)
+        layout_img_view_top.addWidget(self.screen_select_box)
+        layout_img_view_top.addWidget(self.screenshot_button)
         widget_img_view = QWidget()
         layout_img_view = QVBoxLayout(widget_img_view)
+        layout_img_view.addLayout(layout_img_view_top)
         layout_img_view.addWidget(self.graphics_view)
         layout_img_view.addWidget(self.zoom_slider)
 
@@ -112,6 +127,13 @@ class MainWindow(QMainWindow):
 
     def load_image(self, file_path):
         pixmap = QPixmap(file_path)
+        self.image_item.setPixmap(pixmap)
+        self.scene.setSceneRect(QRectF(pixmap.rect()))
+        self.graphics_view.fitInView(self.image_item, Qt.KeepAspectRatio)
+
+    def take_screenshot(self):
+        screen = self.screen_list[self.screen_select_box.currentIndex()]
+        pixmap = QScreen.grabWindow(screen)
         self.image_item.setPixmap(pixmap)
         self.scene.setSceneRect(QRectF(pixmap.rect()))
         self.graphics_view.fitInView(self.image_item, Qt.KeepAspectRatio)
