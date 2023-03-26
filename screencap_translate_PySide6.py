@@ -1,8 +1,10 @@
 import sys
-from PySide6.QtCore import Qt, QRectF, QPointF, QLineF
-from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen
+import threading
+from PySide6.QtCore import Qt, QRectF, QPointF, QLineF, Signal
+from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen, QKeySequence
 from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter, QComboBox
 from PIL import ImageQt
+from pynput import keyboard
 
 from st.ocr import ocr_text
 from st.translate import translate_text_deepl
@@ -10,6 +12,8 @@ from st.translate import translate_text_deepl
 from config import DEEPL_KEY
 
 class MainWindow(QMainWindow):
+    take_screenshot_signal = Signal()
+
     def __init__(self):
         super().__init__()
         self.screen_list = QApplication.screens()
@@ -17,8 +21,15 @@ class MainWindow(QMainWindow):
 
         self.ocr_text = ''
 
+        # Start the global hotkeys listener thread
+        self.take_screenshot_signal.connect(self.take_screenshot)
+        self.listener = threading.Thread(target=self.set_up_hotkeys)
+        self.listener.daemon = True
+        self.listener.start()
+
+
     def setup_ui(self):
-        self.setWindowTitle("Image Region Selector")
+        self.setWindowTitle("Screenshot Translator")
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
 
@@ -113,6 +124,13 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout()
         main_layout.addWidget(splitter_main)
         self.central_widget.setLayout(main_layout)
+        
+    def set_up_hotkeys(self):
+        # TODO: Make hotkeys customizable
+        with keyboard.GlobalHotKeys(
+            {"<ctrl>+<alt>+q": self.take_screenshot_signal.emit}
+        ) as hk:
+            hk.join()
 
     def set_zoom(self, value):
         factor = value / 100
