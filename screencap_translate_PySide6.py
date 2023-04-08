@@ -9,7 +9,7 @@ from pynput import keyboard
 from st.ocr import ocr_text
 from st.translate import translate_text_deepl
 
-from config import DEEPL_KEY
+from config import DEEPL_KEY, HOTKEY
 
 class MainWindow(QMainWindow):
     take_screenshot_signal = Signal()
@@ -128,7 +128,7 @@ class MainWindow(QMainWindow):
     def set_up_hotkeys(self):
         # TODO: Make hotkeys customizable
         with keyboard.GlobalHotKeys(
-            {"<ctrl>+<alt>+q": self.take_screenshot_signal.emit}
+            {HOTKEY: self.take_screenshot_signal.emit}
         ) as hk:
             hk.join()
 
