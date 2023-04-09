@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
         self.screen_select_box.addItems(map(lambda x: x.name(), self.screen_list))
 
         # Set up screenshot button
-        self.screenshot_button = QPushButton("Take Screenhot", self)
+        self.screenshot_button = QPushButton("Take Screenshot", self)
         self.screenshot_button.clicked.connect(self.take_screenshot)
 
         # Set up image display widget
