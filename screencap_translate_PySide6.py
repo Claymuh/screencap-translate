@@ -1,7 +1,7 @@
 import sys
 import threading
 from PySide6.QtCore import Qt, QRectF, QPointF, QLineF, Signal
-from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen, QKeySequence
+from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen, QKeySequence, QWheelEvent
 from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter, QComboBox
 from PIL import ImageQt
 from pynput import keyboard
@@ -184,15 +184,22 @@ class CustomGraphicsView(QGraphicsView):
         super().__init__(parent)
         self.selection_start = None
         self.selection_rect = None
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.setInteractive(True)
+        self.setRenderHint(QPainter.Antialiasing, True)
+        self.setRenderHint(QPainter.SmoothPixmapTransform, True)
 
     def mousePressEvent(self, event):
-        self.selection_start = self.mapToScene(event.position().toPoint())
+        if event.buttons() == Qt.RightButton:
+            self.selection_start = self.mapToScene(event.position().toPoint())
+        super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.LeftButton:
+        if event.buttons() == Qt.RightButton:
             current_pos = self.mapToScene(event.position().toPoint())
             self.selection_rect = QRectF(self.selection_start, current_pos).normalized()
             self.scene().update()
+        super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if self.selection_rect is not None:
@@ -202,6 +209,14 @@ class CustomGraphicsView(QGraphicsView):
             self.selection_item = self.scene().addRect(self.selection_rect, pen)
             self.ocr_selection(self.selection_rect)
             self.selection_rect = None
+        super().mouseReleaseEvent(event)
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        if event.modifiers() == Qt.ControlModifier:
+            zoom_factor = 1.25 if event.angleDelta().y() > 0 else 0.8
+            self.scale(zoom_factor, zoom_factor)
+        else:
+            super().wheelEvent(event)
 
     def drawForeground(self, painter, rect):
         if self.selection_rect is not None:
