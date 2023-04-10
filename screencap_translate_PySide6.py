@@ -2,7 +2,9 @@ import sys
 import threading
 from PySide6.QtCore import Qt, QRectF, QPointF, QLineF, Signal
 from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen, QKeySequence, QWheelEvent
-from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter, QComboBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, \
+    QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter, QComboBox, \
+    QGridLayout, QCheckBox, QDoubleSpinBox
 from PIL import ImageQt
 from pynput import keyboard
 
@@ -73,6 +75,7 @@ class MainWindow(QMainWindow):
         self.window_menu.addAction(self.always_on_top_action)
 
     def set_up_left_widget(self):
+
         # Set up screen select ComboBox
         self.screen_select_label = QLabel("Screen")
         self.screen_select_box = QComboBox(self)
@@ -81,6 +84,14 @@ class MainWindow(QMainWindow):
         # Set up screenshot button
         self.screenshot_button = QPushButton("Take Screenshot", self)
         self.screenshot_button.clicked.connect(self.take_screenshot)
+        self.auto_screenshot_checkbox = QCheckBox("Auto screenshot", self)
+        self.auto_screenshot_interval_label = QLabel("Interval")
+        self.auto_screenshot_interval_spinbox = QDoubleSpinBox(self)
+        self.auto_screenshot_interval_spinbox.setMinimum(0.1)
+        self.auto_screenshot_interval_spinbox.setSuffix(" s")
+        self.auto_screenshot_interval_spinbox.setValue(1.0)
+        self.auto_screenshot_interval_spinbox.setDecimals(1)
+        # TODO: Add signal to reset QTimer if interval is changed while timer is active
 
         # Set up image display widget
         self.image = QPixmap()
@@ -103,15 +114,21 @@ class MainWindow(QMainWindow):
 
         self.zoom_slider.valueChanged.connect(self.set_zoom)
 
+        # Layout of the top part (above the screenshot view)
+        top_grid = QGridLayout()
+
         # Layout of the image view
-        layout_img_view_top = QHBoxLayout()
-        layout_img_view_top.addWidget(self.screen_select_label)
-        layout_img_view_top.addWidget(self.screen_select_box)
-        layout_img_view_top.addWidget(self.screenshot_button)
+        self.auto_screenshot_interval_label.setAlignment(Qt.AlignRight | Qt.AlignCenter)
+        top_grid.addWidget(self.screen_select_label, 0, 0)
+        top_grid.addWidget(self.screen_select_box, 1, 0)
+        top_grid.addWidget(self.screenshot_button, 0, 1)
+        top_grid.addWidget(self.auto_screenshot_interval_spinbox, 1, 2)
+        top_grid.addWidget(self.auto_screenshot_interval_label, 1, 1)
+        top_grid.addWidget(self.auto_screenshot_checkbox, 0, 2)
 
         widget_left = QWidget()
         layout_img_view = QVBoxLayout(widget_left)
-        layout_img_view.addLayout(layout_img_view_top)
+        layout_img_view.addLayout(top_grid)
         layout_img_view.addWidget(self.graphics_view)
         layout_img_view.addWidget(self.zoom_slider)
 
