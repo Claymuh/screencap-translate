@@ -33,7 +33,36 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Screenshot Translator")
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
+        self.main_splitter = QSplitter()
 
+        self.set_up_left_widget()
+        self.set_up_central_widget()
+        self.set_up_right_widget()
+
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.main_splitter)
+        self.central_widget.setLayout(main_layout)
+
+    def set_up_menu_bar(self):
+        # Set up the menu bar
+        self.menu_bar = QMenuBar()
+        self.setMenuBar(self.menu_bar)
+
+        self.file_menu = self.menu_bar.addMenu("File")
+
+        # Quit menu entry
+        self.quit_action = QAction("Quit", self)
+        self.quit_action.setShortcut("Ctrl+Q")
+        self.quit_action.triggered.connect(self.close)
+        self.file_menu.addAction(self.quit_action)
+
+        # Open image menu entry
+        self.open_image_action = QAction("Open Image", self)
+        self.open_image_action.setShortcut("Ctrl+O")
+        self.open_image_action.triggered.connect(self.open_image)
+        self.file_menu.addAction(self.open_image_action)
+
+    def set_up_left_widget(self):
         # Set up screen select ComboBox
         self.screen_select_label = QLabel("Screen")
         self.screen_select_box = QComboBox(self)
@@ -64,6 +93,21 @@ class MainWindow(QMainWindow):
 
         self.zoom_slider.valueChanged.connect(self.set_zoom)
 
+        # Layout of the image view
+        layout_img_view_top = QHBoxLayout()
+        layout_img_view_top.addWidget(self.screen_select_label)
+        layout_img_view_top.addWidget(self.screen_select_box)
+        layout_img_view_top.addWidget(self.screenshot_button)
+
+        widget_left = QWidget()
+        layout_img_view = QVBoxLayout(widget_left)
+        layout_img_view.addLayout(layout_img_view_top)
+        layout_img_view.addWidget(self.graphics_view)
+        layout_img_view.addWidget(self.zoom_slider)
+
+        self.main_splitter.addWidget(widget_left)
+
+    def set_up_central_widget(self):
         # Set up OCR text edit widget
         self.ocr_widget = QPlainTextEdit(self.central_widget)
         self.ocr_widget.setReadOnly(True)
@@ -80,56 +124,21 @@ class MainWindow(QMainWindow):
         self.translate_button = QPushButton("Translate!", self)
         self.translate_button.clicked.connect(self.translate_text)
 
-        # Layout of the image view
-        layout_img_view_top = QHBoxLayout()
-        layout_img_view_top.addWidget(self.screen_select_label)
-        layout_img_view_top.addWidget(self.screen_select_box)
-        layout_img_view_top.addWidget(self.screenshot_button)
-        widget_img_view = QWidget()
-        layout_img_view = QVBoxLayout(widget_img_view)
-        layout_img_view.addLayout(layout_img_view_top)
-        layout_img_view.addWidget(self.graphics_view)
-        layout_img_view.addWidget(self.zoom_slider)
-
         # Layout of the side bar
-        widget_side = QWidget()
-        layout_side = QVBoxLayout(widget_side)
+        central_widget = QWidget()
+        layout_side = QVBoxLayout(central_widget)
         layout_side.addWidget(self.ocr_label)
         layout_side.addWidget(self.ocr_widget)
         layout_side.addWidget(self.translate_button)
         layout_side.addWidget(self.translated_label)
         layout_side.addWidget(self.translated_widget)
 
-        # High-level layout
-        splitter_main = QSplitter()
-        splitter_main.addWidget(widget_img_view)
-        splitter_main.addWidget(widget_side)
-        main_layout = QVBoxLayout()
-        main_layout.addWidget(splitter_main)
-        self.central_widget.setLayout(main_layout)
+        self.main_splitter.addWidget(central_widget)
 
-    def set_up_menu_bar(self):
-        # Set up the menu bar
-        self.menu_bar = QMenuBar()
-        self.setMenuBar(self.menu_bar)
-
-        self.file_menu = self.menu_bar.addMenu("File")
-
-        # Quit menu entry
-        self.quit_action = QAction("Quit", self)
-        self.quit_action.setShortcut("Ctrl+Q")
-        self.quit_action.triggered.connect(self.close)
-        self.file_menu.addAction(self.quit_action)
-
-        # Open image menu entry
-        self.open_image_action = QAction("Open Image", self)
-        self.open_image_action.setShortcut("Ctrl+O")
-        self.open_image_action.triggered.connect(self.open_image)
-        self.file_menu.addAction(self.open_image_action)
-
+    def set_up_right_widget(self):
+        pass
 
     def set_up_hotkeys(self):
-        # TODO: Make hotkeys customizable
         with keyboard.GlobalHotKeys(
             {HOTKEY: self.take_screenshot_signal.emit}
         ) as hk:
