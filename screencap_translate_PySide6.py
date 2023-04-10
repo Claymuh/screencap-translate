@@ -1,6 +1,6 @@
 import sys
 import threading
-from PySide6.QtCore import Qt, QRectF, QPointF, QLineF, Signal
+from PySide6.QtCore import Qt, QRectF, QPointF, QLineF, Signal, QTimer
 from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen, QKeySequence, QWheelEvent
 from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, \
     QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter, QComboBox, \
@@ -27,8 +27,13 @@ class MainWindow(QMainWindow):
         self.translated_text = ""
         self.translated_text_history = ""
 
+        self.auto_screenshot_timer = QTimer(self)
+        self.auto_screenshot_timer.setInterval(1000)
+        self.auto_screenshot_timer.timeout.connect(self.take_screenshot)
+
         # Start the global hotkeys listener thread
         self.take_screenshot_signal.connect(self.take_screenshot)
+        self.take_screenshot_signal.connect(self.bring_to_foreground)
         self.listener = threading.Thread(target=self.set_up_hotkeys)
         self.listener.daemon = True
         self.listener.start()
@@ -96,7 +101,7 @@ class MainWindow(QMainWindow):
         self.auto_screenshot_interval_spinbox.setSuffix(" s")
         self.auto_screenshot_interval_spinbox.setValue(1.0)
         self.auto_screenshot_interval_spinbox.setDecimals(1)
-        # TODO: Add signal to reset QTimer if interval is changed while timer is active
+        self.auto_screenshot_interval_spinbox.valueChanged.connect(self.update_timer_interval)
 
         # Set up image display widget
         self.image = QPixmap()
@@ -213,14 +218,6 @@ class MainWindow(QMainWindow):
         self.scene.setSceneRect(QRectF(pixmap.rect()))
         self.graphics_view.fitInView(self.image_item, Qt.KeepAspectRatio)
 
-    def take_screenshot(self):
-        screen = self.screen_list[self.screen_select_box.currentIndex()]
-        pixmap = QScreen.grabWindow(screen)
-        self.image_item.setPixmap(pixmap)
-        self.scene.setSceneRect(QRectF(pixmap.rect()))
-        self.graphics_view.fitInView(self.image_item, Qt.KeepAspectRatio)
-        self.bring_to_foreground()
-
     def bring_to_foreground(self):
         # Get window into the foreground and focus, then reset status to be able to repeat this process
         self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
@@ -243,14 +240,26 @@ class MainWindow(QMainWindow):
         # TODO: Add logic to enable auto screenshot taking
         if self.auto_screenshot_button.isChecked():
             print('on')
+            self.auto_screenshot_timer.start()
         else:
-            print('off')
+            self.auto_screenshot_timer.stop()
+
+    def update_timer_interval(self, value):
+        self.auto_screenshot_timer.setInterval(value * 1000)
+
+    def take_screenshot(self):
+        screen = self.screen_list[self.screen_select_box.currentIndex()]
+        pixmap = QScreen.grabWindow(screen)
+        self.image_item.setPixmap(pixmap)
+        self.scene.setSceneRect(QRectF(pixmap.rect()))
+        self.graphics_view.fitInView(self.image_item, Qt.KeepAspectRatio)
 
     def update_ocr_text(self, text):
         self.ocr_text = text
         self.ocr_text_history += self.ocr_text + "\n\n"
         self.ocr_widget.setPlainText(self.ocr_text)
         self.ocr_history_widget.setPlainText(self.ocr_text_history)
+
 
     def translate_text(self):
         self.translated_text = translate_text_deepl(self.ocr_text, DEEPL_KEY)
