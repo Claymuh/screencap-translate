@@ -20,7 +20,10 @@ class MainWindow(QMainWindow):
         self.set_up_menu_bar()
         self.setup_ui()
 
-        self.ocr_text = ''
+        self.ocr_text = ""
+        self.ocr_text_history = ""
+        self.translated_text = ""
+        self.translated_text_history = ""
 
         # Start the global hotkeys listener thread
         self.take_screenshot_signal.connect(self.take_screenshot)
@@ -136,7 +139,27 @@ class MainWindow(QMainWindow):
         self.main_splitter.addWidget(central_widget)
 
     def set_up_right_widget(self):
-        pass
+        # Set up OCR text edit widget
+        self.ocr_history_widget = QPlainTextEdit(self.central_widget)
+        self.ocr_history_widget.setReadOnly(True)
+
+        # Set up translated text edit widget
+        self.translated_history_widget = QPlainTextEdit(self.central_widget)
+        self.translated_history_widget.setReadOnly(True)
+
+        # set up labels
+        self.ocr_history_label = QLabel("OCR history")
+        self.translated_history_label = QLabel("Translated History")
+
+        # Layout of the side bar
+        right_widget = QWidget()
+        layout_side = QVBoxLayout(right_widget)
+        layout_side.addWidget(self.ocr_history_label)
+        layout_side.addWidget(self.ocr_history_widget)
+        layout_side.addWidget(self.translated_history_label)
+        layout_side.addWidget(self.translated_history_widget)
+
+        self.main_splitter.addWidget(right_widget)
 
     def set_up_hotkeys(self):
         with keyboard.GlobalHotKeys(
@@ -181,11 +204,15 @@ class MainWindow(QMainWindow):
 
     def update_ocr_text(self, text):
         self.ocr_text = text
+        self.ocr_text_history += self.ocr_text + "\n\n"
         self.ocr_widget.setPlainText(self.ocr_text)
+        self.ocr_history_widget.setPlainText(self.ocr_text_history)
 
     def translate_text(self):
-        translated_text = translate_text_deepl(self.ocr_text, DEEPL_KEY)
-        self.translated_widget.setPlainText(translated_text)
+        self.translated_text = translate_text_deepl(self.ocr_text, DEEPL_KEY)
+        self.translated_text_history += self.translated_text + "\n\n"
+        self.translated_widget.setPlainText(self.translated_text)
+        self.translated_history_widget.setPlainText(self.translated_text_history)
 
 
 class CustomGraphicsView(QGraphicsView):
