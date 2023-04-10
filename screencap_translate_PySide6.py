@@ -278,26 +278,14 @@ class CustomGraphicsView(QGraphicsView):
 
         self.setDragMode(QGraphicsView.ScrollHandDrag)
         self.setInteractive(True)
-        self.setRenderHint(QPainter.Antialiasing, False)
         self.setRenderHint(QPainter.SmoothPixmapTransform, True)
 
         # Create the initial selectable rectangle
-        self.rectangle = QGraphicsRectItem(0, 0, 500, 500)
-        self.rectangle.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.rectangle.setFlag(QGraphicsItem.ItemIsSelectable, True)
-        self.rectangle.setBrush(QBrush(QColor(100, 100, 200, 100)))
-        self.rectangle.setPen(QPen(Qt.black, 2))
+        self.rectangle = SelectionRectangle(0, 0, 500, 500)
 
         # Add the rectangle to the scene
         self.scene().addItem(self.rectangle)
-
-    def mouseMoveEvent(self, event):
-        # If the left mouse button is pressed and the rectangle is selected, adjust the rectangle size
-        if event.buttons() & Qt.LeftButton and self.rectangle.isSelected():
-            position = self.mapToScene(event.pos())
-            self.rectangle.setRect(QRectF(self.rectangle.rect().topLeft(), position).normalized())
-
-        super().mouseMoveEvent(event)
+        self.rectangle.add_handle()
 
     def wheelEvent(self, event: QWheelEvent) -> None:
         if event.modifiers() == Qt.ControlModifier:
@@ -316,20 +304,57 @@ class CustomGraphicsView(QGraphicsView):
         if not selected_image.isNull():
             roi = selected_image.copy(self.rectangle.sceneBoundingRect().toAlignedRect())
             image = ImageQt.fromqpixmap(roi)  # Convert to PIL image that is compatible with tesseract
-            image.save("test.png") ## TODO: REMOVE DEBUG STATEMENT
             extracted_text = ocr_text(image, to_lang='eng', config=r'--psm 6')
             return extracted_text
         return ""
 
-    def ocr_selection_old(self, rect):
-        selected_image = self.topLevelWidget().image_item.pixmap()
-        roi = selected_image.copy(rect.toAlignedRect())
-        image = ImageQt.fromqpixmap(roi)  # Convert to PIL image that is compatible with tesseract
-        extracted_text = ocr_text(image, to_lang='eng', config=r'--psm 6')
-        self.topLevelWidget().update_ocr_text(extracted_text)
-
     def fit_in_view(self):
         self.fitInView(self.image_item, Qt.KeepAspectRatio)
+
+
+class SelectionRectangle(QGraphicsRectItem):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        self.handle = None
+
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        #self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setBrush(QBrush(QColor(100, 100, 200, 100)))
+        self.setPen(QPen(Qt.black, 2))
+
+    def add_handle(self, size=15):
+        xy = self.boundingRect().bottomRight()
+        self.handle = DragHandle(xy.x()-size/2, xy.y()-size/2, size, size, parent=self)
+        self.scene().addItem(self.handle)
+
+    def resize_to_handle_pos(self):
+        handle_pos = self.handle.sceneBoundingRect()
+        self.setRect(QRectF(self.rect().topLeft(), handle_pos.center()))
+
+
+class DragHandle(QGraphicsRectItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setBrush(QBrush(QColor(255, 255, 0)))
+        self.setPen(QPen(Qt.black, 2))
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        #self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setCursor(Qt.SizeAllCursor)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.setBrush(QColor(255, 0, 0))
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        self.parentItem().resize_to_handle_pos()
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.setBrush(QColor(255, 255, 0))
+        super().mouseReleaseEvent(event)
 
 
 if __name__ == "__main__":
