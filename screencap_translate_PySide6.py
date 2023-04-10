@@ -84,8 +84,13 @@ class MainWindow(QMainWindow):
         # Set up screenshot button
         self.screenshot_button = QPushButton("Take Screenshot", self)
         self.screenshot_button.clicked.connect(self.take_screenshot)
-        self.auto_screenshot_checkbox = QCheckBox("Auto screenshot", self)
+
+        self.auto_screenshot_button = QPushButton("Auto screenshot", self)
+        self.auto_screenshot_button.clicked.connect(self.toggle_auto_screenshot)
+        self.auto_screenshot_button.setCheckable(True)
+
         self.auto_screenshot_interval_label = QLabel("Interval")
+
         self.auto_screenshot_interval_spinbox = QDoubleSpinBox(self)
         self.auto_screenshot_interval_spinbox.setMinimum(0.1)
         self.auto_screenshot_interval_spinbox.setSuffix(" s")
@@ -118,13 +123,13 @@ class MainWindow(QMainWindow):
         top_grid = QGridLayout()
 
         # Layout of the image view
-        self.auto_screenshot_interval_label.setAlignment(Qt.AlignRight | Qt.AlignCenter)
+        self.auto_screenshot_interval_label.setAlignment(Qt.AlignCenter)
         top_grid.addWidget(self.screen_select_label, 0, 0)
         top_grid.addWidget(self.screen_select_box, 1, 0)
         top_grid.addWidget(self.screenshot_button, 0, 1)
         top_grid.addWidget(self.auto_screenshot_interval_spinbox, 1, 2)
-        top_grid.addWidget(self.auto_screenshot_interval_label, 1, 1)
-        top_grid.addWidget(self.auto_screenshot_checkbox, 0, 2)
+        top_grid.addWidget(self.auto_screenshot_interval_label, 0, 2)
+        top_grid.addWidget(self.auto_screenshot_button, 1, 1)
 
         widget_left = QWidget()
         layout_img_view = QVBoxLayout(widget_left)
@@ -233,6 +238,13 @@ class MainWindow(QMainWindow):
             print("false")
             self.setWindowFlags(self.windowFlags() & ~Qt.WindowStaysOnTopHint)
         self.show()
+
+    def toggle_auto_screenshot(self):
+        # TODO: Add logic to enable auto screenshot taking
+        if self.auto_screenshot_button.isChecked():
+            print('on')
+        else:
+            print('off')
 
     def update_ocr_text(self, text):
         self.ocr_text = text
