@@ -1,10 +1,10 @@
 import sys
 import threading
 from PySide6.QtCore import Qt, QRectF, QPointF, QLineF, Signal, QTimer
-from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen, QKeySequence, QWheelEvent
+from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen, QKeySequence, QWheelEvent, QMouseEvent
 from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, \
     QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter, QComboBox, \
-    QGridLayout, QCheckBox, QDoubleSpinBox
+    QGridLayout, QCheckBox, QDoubleSpinBox, QGraphicsRectItem, QGraphicsItem
 from PIL import ImageQt
 from pynput import keyboard
 
@@ -104,15 +104,7 @@ class MainWindow(QMainWindow):
         self.auto_screenshot_interval_spinbox.valueChanged.connect(self.update_timer_interval)
 
         # Set up image display widget
-        self.image = QPixmap()
-        self.scene = QGraphicsScene(self)
-        self.scene.setSceneRect(QRectF(self.image.rect()))
-
-        self.image_item = self.scene.addPixmap(self.image)
-
         self.graphics_view = CustomGraphicsView(self.central_widget)
-        self.graphics_view.setRenderHint(QPainter.Antialiasing)
-        self.graphics_view.setScene(self.scene)
 
         # Set up zoom slider
         self.zoom_slider = QSlider(Qt.Horizontal)
@@ -157,18 +149,29 @@ class MainWindow(QMainWindow):
         self.ocr_label = QLabel("OCRed text")
         self.translated_label = QLabel("Translated text")
 
-        # Set up translate button
+        # Set up buttons
+        self.ocr_button = QPushButton("OCR", self)
+        self.ocr_button.clicked.connect(self.ocr_image_selection)
+
         self.translate_button = QPushButton("Translate!", self)
         self.translate_button.clicked.connect(self.translate_text)
 
         # Layout of the side bar
         central_widget = QWidget()
-        layout_side = QVBoxLayout(central_widget)
-        layout_side.addWidget(self.ocr_label)
-        layout_side.addWidget(self.ocr_widget)
-        layout_side.addWidget(self.translate_button)
-        layout_side.addWidget(self.translated_label)
-        layout_side.addWidget(self.translated_widget)
+
+        layout_ocr_menu = QHBoxLayout()
+        layout_ocr_menu.addWidget(self.ocr_label)
+        layout_ocr_menu.addWidget(self.ocr_button)
+
+        layout_translate_menu = QHBoxLayout()
+        layout_translate_menu.addWidget(self.translated_label)
+        layout_translate_menu.addWidget(self.translate_button)
+
+        layout_toplevel = QVBoxLayout(central_widget)
+        layout_toplevel.addLayout(layout_ocr_menu)
+        layout_toplevel.addWidget(self.ocr_widget)
+        layout_toplevel.addLayout(layout_translate_menu)
+        layout_toplevel.addWidget(self.translated_widget)
 
         self.main_splitter.addWidget(central_widget)
 
@@ -237,9 +240,7 @@ class MainWindow(QMainWindow):
         self.show()
 
     def toggle_auto_screenshot(self):
-        # TODO: Add logic to enable auto screenshot taking
         if self.auto_screenshot_button.isChecked():
-            print('on')
             self.auto_screenshot_timer.start()
         else:
             self.auto_screenshot_timer.stop()
@@ -250,55 +251,53 @@ class MainWindow(QMainWindow):
     def take_screenshot(self):
         screen = self.screen_list[self.screen_select_box.currentIndex()]
         pixmap = QScreen.grabWindow(screen)
-        self.image_item.setPixmap(pixmap)
-        self.scene.setSceneRect(QRectF(pixmap.rect()))
-        self.graphics_view.fitInView(self.image_item, Qt.KeepAspectRatio)
+        self.graphics_view.update_pixmap(pixmap)
 
-    def update_ocr_text(self, text):
-        self.ocr_text = text
+    def ocr_image_selection(self):
+        self.ocr_text = self.graphics_view.ocr_selection()
         self.ocr_text_history += self.ocr_text + "\n\n"
         self.ocr_widget.setPlainText(self.ocr_text)
         self.ocr_history_widget.setPlainText(self.ocr_text_history)
 
-
     def translate_text(self):
-        self.translated_text = translate_text_deepl(self.ocr_text, DEEPL_KEY)
-        self.translated_text_history += self.translated_text + "\n\n"
-        self.translated_widget.setPlainText(self.translated_text)
-        self.translated_history_widget.setPlainText(self.translated_text_history)
+        if self.ocr_text:
+            self.translated_text = translate_text_deepl(self.ocr_text, DEEPL_KEY)
+            self.translated_text_history += self.translated_text + "\n\n"
+            self.translated_widget.setPlainText(self.translated_text)
+            self.translated_history_widget.setPlainText(self.translated_text_history)
 
 
 class CustomGraphicsView(QGraphicsView):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.selection_start = None
-        self.selection_rect = None
+
+        self.setScene(QGraphicsScene(self))
+
+        self.image_item = self.scene().addPixmap(QPixmap())
+        self.scene().setSceneRect(QRectF(self.image_item.pixmap().rect()))
+
         self.setDragMode(QGraphicsView.ScrollHandDrag)
         self.setInteractive(True)
-        self.setRenderHint(QPainter.Antialiasing, True)
+        self.setRenderHint(QPainter.Antialiasing, False)
         self.setRenderHint(QPainter.SmoothPixmapTransform, True)
 
-    def mousePressEvent(self, event):
-        if event.buttons() == Qt.RightButton:
-            self.selection_start = self.mapToScene(event.position().toPoint())
-        super().mousePressEvent(event)
+        # Create the initial selectable rectangle
+        self.rectangle = QGraphicsRectItem(0, 0, 500, 500)
+        self.rectangle.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.rectangle.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.rectangle.setBrush(QBrush(QColor(100, 100, 200, 100)))
+        self.rectangle.setPen(QPen(Qt.black, 2))
+
+        # Add the rectangle to the scene
+        self.scene().addItem(self.rectangle)
 
     def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.RightButton:
-            current_pos = self.mapToScene(event.position().toPoint())
-            self.selection_rect = QRectF(self.selection_start, current_pos).normalized()
-            self.scene().update()
-        super().mouseMoveEvent(event)
+        # If the left mouse button is pressed and the rectangle is selected, adjust the rectangle size
+        if event.buttons() & Qt.LeftButton and self.rectangle.isSelected():
+            position = self.mapToScene(event.pos())
+            self.rectangle.setRect(QRectF(self.rectangle.rect().topLeft(), position).normalized())
 
-    def mouseReleaseEvent(self, event):
-        if self.selection_rect is not None:
-            if hasattr(self, 'selection_item') and self.selection_item is not None:
-                self.scene().removeItem(self.selection_item)
-            pen = QPen(Qt.red, 2)
-            self.selection_item = self.scene().addRect(self.selection_rect, pen)
-            self.ocr_selection(self.selection_rect)
-            self.selection_rect = None
-        super().mouseReleaseEvent(event)
+        super().mouseMoveEvent(event)
 
     def wheelEvent(self, event: QWheelEvent) -> None:
         if event.modifiers() == Qt.ControlModifier:
@@ -307,19 +306,30 @@ class CustomGraphicsView(QGraphicsView):
         else:
             super().wheelEvent(event)
 
-    def drawForeground(self, painter, rect):
-        if self.selection_rect is not None:
-            pen = QPen(Qt.red, 2)
-            painter.setPen(pen)
-            painter.drawRect(self.selection_rect)
+    def update_pixmap(self, new_pixmap):
+        self.image_item.setPixmap(new_pixmap)
+        self.scene().setSceneRect(QRectF(new_pixmap.rect()))
+        self.fit_in_view()
 
-    def ocr_selection(self, rect):
+    def ocr_selection(self) -> str:
+        selected_image = self.image_item.pixmap()
+        if not selected_image.isNull():
+            roi = selected_image.copy(self.rectangle.sceneBoundingRect().toAlignedRect())
+            image = ImageQt.fromqpixmap(roi)  # Convert to PIL image that is compatible with tesseract
+            image.save("test.png") ## TODO: REMOVE DEBUG STATEMENT
+            extracted_text = ocr_text(image, to_lang='eng', config=r'--psm 6')
+            return extracted_text
+        return ""
+
+    def ocr_selection_old(self, rect):
         selected_image = self.topLevelWidget().image_item.pixmap()
         roi = selected_image.copy(rect.toAlignedRect())
         image = ImageQt.fromqpixmap(roi)  # Convert to PIL image that is compatible with tesseract
         extracted_text = ocr_text(image, to_lang='eng', config=r'--psm 6')
         self.topLevelWidget().update_ocr_text(extracted_text)
 
+    def fit_in_view(self):
+        self.fitInView(self.image_item, Qt.KeepAspectRatio)
 
 
 if __name__ == "__main__":
