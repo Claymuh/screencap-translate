@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
         self.setMenuBar(self.menu_bar)
 
         self.file_menu = self.menu_bar.addMenu("File")
+        self.window_menu = self.menu_bar.addMenu("Window")
 
         # Quit menu entry
         self.quit_action = QAction("Quit", self)
@@ -64,6 +65,12 @@ class MainWindow(QMainWindow):
         self.open_image_action.setShortcut("Ctrl+O")
         self.open_image_action.triggered.connect(self.open_image)
         self.file_menu.addAction(self.open_image_action)
+
+        # Always on top menu entry
+        self.always_on_top_action = QAction("Always on top", self)
+        self.always_on_top_action.setCheckable(True)
+        self.always_on_top_action.triggered.connect(self.toggle_always_on_top)
+        self.window_menu.addAction(self.always_on_top_action)
 
     def set_up_left_widget(self):
         # Set up screen select ComboBox
@@ -194,12 +201,20 @@ class MainWindow(QMainWindow):
 
     def bring_to_foreground(self):
         # Get window into the foreground and focus, then reset status to be able to repeat this process
-        old_flags = self.windowFlags()
         self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
         self.setWindowState(Qt.WindowState.WindowActive)
         self.show()  # Applies new flags
-        self.setWindowFlags(old_flags)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowStaysOnTopHint)
         self.setWindowState(Qt.WindowState.WindowNoState)
+        self.show()
+
+    def toggle_always_on_top(self, checked):
+        if checked:
+            print("true")
+            self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+        else:
+            print("false")
+            self.setWindowFlags(self.windowFlags() & ~Qt.WindowStaysOnTopHint)
         self.show()
 
     def update_ocr_text(self, text):
