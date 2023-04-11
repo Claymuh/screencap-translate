@@ -1,6 +1,6 @@
 import sys
 import threading
-from PySide6.QtCore import Qt, QRectF, QPointF, QLineF, Signal, QTimer
+from PySide6.QtCore import Qt, QRectF, QPointF, QLineF, Signal, QTimer, QSizeF
 from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen, QKeySequence, QWheelEvent, QMouseEvent
 from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, \
     QMenuBar, QFileDialog, QGraphicsPixmapItem, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter, QComboBox, \
@@ -281,7 +281,7 @@ class CustomGraphicsView(QGraphicsView):
         self.setRenderHint(QPainter.SmoothPixmapTransform, True)
 
         # Create the initial selectable rectangle
-        self.rectangle = SelectionRectangle(0, 0, 500, 500)
+        self.rectangle = SelectionRectangle(QRectF(0, 0, 500, 500))
 
         # Add the rectangle to the scene
         self.scene().addItem(self.rectangle)
@@ -330,7 +330,9 @@ class SelectionRectangle(QGraphicsRectItem):
 
     def resize_to_handle_pos(self):
         handle_pos = self.handle.sceneBoundingRect()
-        self.setRect(QRectF(self.rect().topLeft(), handle_pos.center()))
+        new_rect = QRectF(0, 0, 0, 0)
+        new_rect.setBottomRight(handle_pos.center() - self.scenePos())
+        self.setRect(new_rect)
 
 
 class DragHandle(QGraphicsRectItem):
