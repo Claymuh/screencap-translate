@@ -293,9 +293,6 @@ class MainWindow(QMainWindow):
     def reset_stylesheet_for_widget(self, widget):
         widget.setStyleSheet("")
 
-    def print(self):
-        print('asdasdasdadsa')
-
     def ocr_image_selection(self):
         self.ocr_text = self.graphics_view.ocr_selection()
         self.ocr_text_history += self.ocr_text + "\n\n"
