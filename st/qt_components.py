@@ -271,6 +271,13 @@ class MainWindow(QMainWindow):
             self.ocr_image_selection()
             if self.auto_translate_checkbox.isChecked():
                 self.translate_text()
+        self.scroll_histories_to_bottom()
+
+    def scroll_histories_to_bottom(self):
+        scrollbar_ocr = self.ocr_history_widget.verticalScrollBar()
+        scrollbar_ocr.setValue(scrollbar_ocr.maximum())
+        scrollbar_translated = self.translated_history_widget.verticalScrollBar()
+        scrollbar_translated.setValue(scrollbar_translated.maximum())
 
     def ocr_image_selection(self):
         self.ocr_text = self.graphics_view.ocr_selection()
