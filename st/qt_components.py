@@ -33,6 +33,8 @@ class MainWindow(QMainWindow):
         self.auto_screenshot_timer.setInterval(1000)
         self.auto_screenshot_timer.timeout.connect(self.screenshot_timer_event)
 
+        self.timers = {}  # Ephemeral timers for temporary highlighting, etc.
+
         # Start the global hotkeys listener thread
         self.take_screenshot_signal.connect(self.take_screenshot)
         self.take_screenshot_signal.connect(self.bring_to_foreground)
@@ -269,8 +271,10 @@ class MainWindow(QMainWindow):
         self.take_screenshot()
         if self.auto_ocr_checkbox.isChecked() and self.graphics_view.has_selection_changed(0.98):
             self.ocr_image_selection()
+            self.highlight_widget_temporarily(self.ocr_widget, 500)
             if self.auto_translate_checkbox.isChecked():
                 self.translate_text()
+                self.highlight_widget_temporarily(self.translated_widget, 500)
         self.scroll_histories_to_bottom()
 
     def scroll_histories_to_bottom(self):
@@ -278,6 +282,19 @@ class MainWindow(QMainWindow):
         scrollbar_ocr.setValue(scrollbar_ocr.maximum())
         scrollbar_translated = self.translated_history_widget.verticalScrollBar()
         scrollbar_translated.setValue(scrollbar_translated.maximum())
+
+    def highlight_widget_temporarily(self, widget, time=500):
+        widget.setStyleSheet("border: 1px solid red")
+        self.timers[widget] = QTimer()
+        self.timers[widget].setSingleShot(True)
+        self.timers[widget].timeout.connect(lambda: self.reset_stylesheet_for_widget(widget))
+        self.timers[widget].start(time)
+
+    def reset_stylesheet_for_widget(self, widget):
+        widget.setStyleSheet("")
+
+    def print(self):
+        print('asdasdasdadsa')
 
     def ocr_image_selection(self):
         self.ocr_text = self.graphics_view.ocr_selection()
@@ -348,7 +365,7 @@ class CustomGraphicsView(QGraphicsView):
         old = np.array(ImageQt.fromqpixmap(self.old_selection_pixmap))
         new = np.array(ImageQt.fromqpixmap(self.get_selection_pixmap()))
         similarity = get_image_similarity(old, new)
-        return similarity > threshold
+        return similarity < threshold
 
     def get_selection_pixmap(self):
         selected_image = self.image_item.pixmap()
