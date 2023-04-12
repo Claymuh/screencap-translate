@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, QRectF, Signal, QTimer
 from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen, QWheelEvent
 from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, \
     QMenuBar, QFileDialog, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter, QComboBox, \
-    QGridLayout, QDoubleSpinBox, QGraphicsRectItem, QGraphicsItem
+    QGridLayout, QDoubleSpinBox, QGraphicsRectItem, QGraphicsItem, QCheckBox
 from pynput import keyboard
 import numpy as np
 
@@ -31,7 +31,7 @@ class MainWindow(QMainWindow):
 
         self.auto_screenshot_timer = QTimer(self)
         self.auto_screenshot_timer.setInterval(1000)
-        self.auto_screenshot_timer.timeout.connect(self.take_screenshot)
+        self.auto_screenshot_timer.timeout.connect(self.screenshot_timer_event)
 
         # Start the global hotkeys listener thread
         self.take_screenshot_signal.connect(self.take_screenshot)
@@ -151,23 +151,33 @@ class MainWindow(QMainWindow):
         self.ocr_label = QLabel("OCRed text")
         self.translated_label = QLabel("Translated text")
 
-        # Set up buttons
+        # Set up buttons & checkboxes
         self.ocr_button = QPushButton("OCR", self)
         self.ocr_button.clicked.connect(self.ocr_image_selection)
 
+        self.auto_ocr_checkbox = QCheckBox("Auto", self)
+
         self.translate_button = QPushButton("Translate!", self)
         self.translate_button.clicked.connect(self.translate_text)
+
+        self.auto_translate_checkbox = QCheckBox("Auto", self)
 
         # Layout of the side bar
         central_widget = QWidget()
 
         layout_ocr_menu = QHBoxLayout()
         layout_ocr_menu.addWidget(self.ocr_label)
+        layout_ocr_menu.addStretch()
         layout_ocr_menu.addWidget(self.ocr_button)
+        layout_ocr_menu.addStretch()
+        layout_ocr_menu.addWidget(self.auto_ocr_checkbox)
 
         layout_translate_menu = QHBoxLayout()
         layout_translate_menu.addWidget(self.translated_label)
+        layout_translate_menu.addStretch()
         layout_translate_menu.addWidget(self.translate_button)
+        layout_translate_menu.addStretch()
+        layout_translate_menu.addWidget(self.auto_translate_checkbox)
 
         layout_toplevel = QVBoxLayout(central_widget)
         layout_toplevel.addLayout(layout_ocr_menu)
@@ -254,6 +264,13 @@ class MainWindow(QMainWindow):
         screen = self.screen_list[self.screen_select_box.currentIndex()]
         pixmap = QScreen.grabWindow(screen)
         self.graphics_view.update_pixmap(pixmap)
+
+    def screenshot_timer_event(self):
+        self.take_screenshot()
+        if self.auto_ocr_checkbox.isChecked() and self.graphics_view.has_selection_changed(0.98):
+            self.ocr_image_selection()
+            if self.auto_translate_checkbox.isChecked():
+                self.translate_text()
 
     def ocr_image_selection(self):
         self.ocr_text = self.graphics_view.ocr_selection()
