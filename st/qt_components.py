@@ -361,16 +361,17 @@ class CustomGraphicsView(QGraphicsView):
 
     def has_selection_changed(self, threshold: float = 0.98):
         if not self.old_selection_pixmap:
-            return False
+            return True
         old = np.array(ImageQt.fromqpixmap(self.old_selection_pixmap))
         new = np.array(ImageQt.fromqpixmap(self.get_selection_pixmap()))
+        if old.shape != new.shape:
+            return True
         similarity = get_image_similarity(old, new)
         return similarity < threshold
 
     def get_selection_pixmap(self):
         selected_image = self.image_item.pixmap()
         return selected_image.copy(self.rectangle.sceneBoundingRect().toAlignedRect())
-
 
 
 class SelectionRectangle(QGraphicsRectItem):
