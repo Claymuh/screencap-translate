@@ -15,7 +15,7 @@ def preprocess_image(image: np.ndarray, mode: str = 'edge_detect') -> np.ndarray
 def get_image_similarity(img1: np.ndarray, img2: np.ndarray, method:Literal["ncc", "ssi"]="ncc") -> float:
     if method == "ncc":
         return cv2.matchTemplate(img1, img2, cv2.TM_CCORR_NORMED)[0][0]
-    elif mthod == "ssi":
+    elif method == "ssi":
         return structural_similarity(img1, img2)
     else:
         raise ValueError("method parameter needs to be 'ncc' or 'ssi")

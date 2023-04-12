@@ -7,10 +7,12 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphi
     QMenuBar, QFileDialog, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter, QComboBox, \
     QGridLayout, QDoubleSpinBox, QGraphicsRectItem, QGraphicsItem
 from pynput import keyboard
+import numpy as np
 
 from config import DEEPL_KEY, HOTKEY
 from st.ocr import ocr_text
 from st.translate import translate_text_deepl
+from st.image_process import get_image_similarity
 
 
 class MainWindow(QMainWindow):
@@ -271,9 +273,13 @@ class CustomGraphicsView(QGraphicsView):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.selection_has_changed = False
+
         self.setScene(QGraphicsScene(self))
 
         self.image_item = self.scene().addPixmap(QPixmap())
+        self.old_selection_pixmap = None
+
         self.scene().setSceneRect(QRectF(self.image_item.pixmap().rect()))
 
         self.setDragMode(QGraphicsView.ScrollHandDrag)
@@ -295,21 +301,35 @@ class CustomGraphicsView(QGraphicsView):
             super().wheelEvent(event)
 
     def update_pixmap(self, new_pixmap):
+        self.old_selection_pixmap = self.get_selection_pixmap().copy()  # save a copy of the pixmap for comparison
         self.image_item.setPixmap(new_pixmap)
         self.scene().setSceneRect(QRectF(new_pixmap.rect()))
         self.fit_in_view()
+        self.selection_has_changed = self.has_selection_changed()
 
     def ocr_selection(self) -> str:
-        selected_image = self.image_item.pixmap()
-        if not selected_image.isNull():
-            roi = selected_image.copy(self.rectangle.sceneBoundingRect().toAlignedRect())
-            image = ImageQt.fromqpixmap(roi)  # Convert to PIL image that is compatible with tesseract
+        selection = self.get_selection_pixmap()
+        if not selection.isNull():
+            image = ImageQt.fromqpixmap(selection)  # Convert to PIL image that is compatible with tesseract
             extracted_text = ocr_text(image, to_lang='eng', config=r'--psm 6')
             return extracted_text
         return ""
 
     def fit_in_view(self):
         self.fitInView(self.image_item, Qt.KeepAspectRatio)
+
+    def has_selection_changed(self, threshold: float = 0.98):
+        if not self.old_selection_pixmap:
+            return False
+        old = np.array(ImageQt.fromqpixmap(self.old_selection_pixmap))
+        new = np.array(ImageQt.fromqpixmap(self.get_selection_pixmap()))
+        similarity = get_image_similarity(old, new)
+        return similarity > threshold
+
+    def get_selection_pixmap(self):
+        selected_image = self.image_item.pixmap()
+        return selected_image.copy(self.rectangle.sceneBoundingRect().toAlignedRect())
+
 
 
 class SelectionRectangle(QGraphicsRectItem):
