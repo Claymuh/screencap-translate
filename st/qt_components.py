@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
 
         # Start the global hotkeys listener thread
         self.take_screenshot_signal.connect(self.take_screenshot)
-        self.take_screenshot_signal.connect(self.bring_to_foreground)
+        #self.take_screenshot_signal.connect(self.bring_to_foreground)
         self.ocr_signal.connect(self.ocr_image_selection)
         self.translate_signal.connect(self.translate_text)
         self.listener = threading.Thread(target=self.set_up_hotkeys)
