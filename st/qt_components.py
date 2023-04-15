@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphi
 from pynput import keyboard
 import numpy as np
 
-from config import DEEPL_KEY, HOTKEY
+import config
 from st.ocr import ocr_text
 from st.translate import translate_text_deepl
 from st.image_process import get_image_similarity
@@ -17,6 +17,8 @@ from st.image_process import get_image_similarity
 
 class MainWindow(QMainWindow):
     take_screenshot_signal = Signal()
+    ocr_signal = Signal()
+    translate_signal = Signal()
 
     def __init__(self):
         super().__init__()
@@ -38,6 +40,8 @@ class MainWindow(QMainWindow):
         # Start the global hotkeys listener thread
         self.take_screenshot_signal.connect(self.take_screenshot)
         self.take_screenshot_signal.connect(self.bring_to_foreground)
+        self.ocr_signal.connect(self.ocr_image_selection)
+        self.translate_signal.connect(self.translate_text)
         self.listener = threading.Thread(target=self.set_up_hotkeys)
         self.listener.daemon = True
         self.listener.start()
@@ -214,7 +218,9 @@ class MainWindow(QMainWindow):
 
     def set_up_hotkeys(self):
         with keyboard.GlobalHotKeys(
-                {HOTKEY: self.take_screenshot_signal.emit}
+                {config.HOTKEY_SCREENSHOT: self.take_screenshot_signal.emit,
+                 config.HOTKEY_OCR: self.ocr_signal.emit,
+                 config.HOTKEY_TRANSLATE: self.translate_signal.emit}
         ) as hk:
             hk.join()
 
@@ -301,7 +307,7 @@ class MainWindow(QMainWindow):
 
     def translate_text(self):
         if self.ocr_text:
-            self.translated_text = translate_text_deepl(self.ocr_text, DEEPL_KEY)
+            self.translated_text = translate_text_deepl(self.ocr_text, config.DEEPL_KEY)
             self.translated_text_history += self.translated_text + "\n\n"
             self.translated_widget.setPlainText(self.translated_text)
             self.translated_history_widget.setPlainText(self.translated_text_history)
@@ -348,7 +354,7 @@ class CustomGraphicsView(QGraphicsView):
     def ocr_selection(self) -> str:
         selection = self.get_selection_pixmap()
         if not selection.isNull():
-            image = ImageQt.fromqpixmap(selection)  # Convert to PIL image that is compatible with tesseract
+            image = np.array(ImageQt.fromqpixmap(selection))  # Convert to numpy array that is compatible with tesseract
             extracted_text = ocr_text(image, to_lang='eng', config=r'--psm 6')
             return extracted_text
         return ""

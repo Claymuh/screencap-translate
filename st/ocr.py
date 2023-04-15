@@ -1,8 +1,10 @@
 import pytesseract
 import numpy as np
 import PIL
+from .image_process import preprocess_image
 
-def ocr_text(img : np.ndarray, to_lang : str ="eng", config : str = ""):
+def ocr_text(img : np.ndarray, to_lang : str ="ita", config : str = ""):
+    #img = preprocess_image(img, "edge_detect")
     result = pytesseract.image_to_string(img, lang=to_lang, config=config)
     result_clean = result.replace("\n", " ")
     return result_clean
