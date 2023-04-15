@@ -89,22 +89,24 @@ class MainWindow(QMainWindow):
 
     def set_up_left_widget(self):
 
+        widget_left = QWidget()
+
         # Set up screen select ComboBox
-        self.screen_select_label = QLabel("Screen")
-        self.screen_select_box = QComboBox(self)
+        self.screen_select_label = QLabel("Screen", widget_left)
+        self.screen_select_box = QComboBox(widget_left)
         self.screen_select_box.addItems(map(lambda x: x.name(), self.screen_list))
 
         # Set up screenshot button
-        self.screenshot_button = QPushButton("Take Screenshot", self)
+        self.screenshot_button = QPushButton("Take Screenshot", widget_left)
         self.screenshot_button.clicked.connect(self.take_screenshot)
 
-        self.auto_screenshot_button = QPushButton("Auto screenshot", self)
+        self.auto_screenshot_button = QPushButton("Auto screenshot", widget_left)
         self.auto_screenshot_button.clicked.connect(self.toggle_auto_screenshot)
         self.auto_screenshot_button.setCheckable(True)
 
-        self.auto_screenshot_interval_label = QLabel("Interval")
+        self.auto_screenshot_interval_label = QLabel("Interval", widget_left)
 
-        self.auto_screenshot_interval_spinbox = QDoubleSpinBox(self)
+        self.auto_screenshot_interval_spinbox = QDoubleSpinBox(widget_left)
         self.auto_screenshot_interval_spinbox.setMinimum(0.1)
         self.auto_screenshot_interval_spinbox.setSuffix(" s")
         self.auto_screenshot_interval_spinbox.setValue(1.0)
@@ -112,10 +114,10 @@ class MainWindow(QMainWindow):
         self.auto_screenshot_interval_spinbox.valueChanged.connect(self.update_timer_interval)
 
         # Set up image display widget
-        self.graphics_view = CustomGraphicsView(self.central_widget)
+        self.graphics_view = CustomGraphicsView(widget_left)
 
         # Set up zoom slider
-        self.zoom_slider = QSlider(Qt.Horizontal)
+        self.zoom_slider = QSlider(Qt.Horizontal, widget_left)
         self.zoom_slider.setMinimum(10)
         self.zoom_slider.setMaximum(200)
         self.zoom_slider.setValue(100)
@@ -136,7 +138,6 @@ class MainWindow(QMainWindow):
         top_grid.addWidget(self.auto_screenshot_interval_label, 0, 2)
         top_grid.addWidget(self.auto_screenshot_button, 1, 1)
 
-        widget_left = QWidget()
         layout_img_view = QVBoxLayout(widget_left)
         layout_img_view.addLayout(top_grid)
         layout_img_view.addWidget(self.graphics_view)
@@ -329,6 +330,9 @@ class CustomGraphicsView(QGraphicsView):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.MIN_ZOOM = 0.1
+        self.MAX_ZOOM = 2
+
         self.selection_has_changed = False
 
         self.setScene(QGraphicsScene(self))
@@ -350,9 +354,15 @@ class CustomGraphicsView(QGraphicsView):
         self.rectangle.add_handle()
 
     def wheelEvent(self, event: QWheelEvent) -> None:
+        zoom_factor = 1.25
         if event.modifiers() == Qt.ControlModifier:
-            zoom_factor = 1.25 if event.angleDelta().y() > 0 else 0.8
-            self.scale(zoom_factor, zoom_factor)
+            if event.angleDelta().y() > 0:
+                if self.transform().m11() * (zoom_factor) < self.MAX_ZOOM:
+                    self.scale(zoom_factor, zoom_factor)
+            else:
+                if self.transform().m11() * (1 / zoom_factor) > self.MIN_ZOOM:
+                    self.scale(1 / zoom_factor, 1 / zoom_factor)
+            self.topLevelWidget().zoom_slider.setValue(int(self.transform().m11() * 100))
         else:
             super().wheelEvent(event)
 
