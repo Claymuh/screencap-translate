@@ -10,9 +10,9 @@ from pynput import keyboard
 import numpy as np
 
 import config
-from st.ocr import ocr_text
-from st.translate import translate_text_deepl
-from st.image_process import get_image_similarity
+import st.ocr
+import st.translate
+import st.image_process
 
 
 class MainWindow(QMainWindow):
@@ -153,9 +153,17 @@ class MainWindow(QMainWindow):
         self.translated_widget = QPlainTextEdit(self.central_widget)
         self.translated_widget.setReadOnly(True)
 
+        # Set up and populate dropdown menus
+        self.ocr_lang_combobox = QComboBox(self.central_widget)
+        self.ocr_lang_combobox.insertItems(0, st.ocr.get_available_ocr_languages())
+        self.translation_lang_combobox = QComboBox(self.central_widget)
+        self.translation_lang_combobox.insertItems(0, st.translate.DEEPL_LANGUAGES.keys())
+
         # set up labels
-        self.ocr_label = QLabel("OCRed text")
-        self.translated_label = QLabel("Translated text")
+        self.ocr_label = QLabel("OCR")
+        self.ocr_label.setAlignment(Qt.AlignCenter)
+        self.translated_label = QLabel("Translation")
+        self.translated_label.setAlignment(Qt.AlignCenter)
 
         # Set up buttons & checkboxes
         self.ocr_button = QPushButton("OCR", self)
@@ -172,22 +180,24 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
 
         layout_ocr_menu = QHBoxLayout()
-        layout_ocr_menu.addWidget(self.ocr_label)
+        layout_ocr_menu.addWidget(self.ocr_lang_combobox)
         layout_ocr_menu.addStretch()
         layout_ocr_menu.addWidget(self.ocr_button)
         layout_ocr_menu.addStretch()
         layout_ocr_menu.addWidget(self.auto_ocr_checkbox)
 
         layout_translate_menu = QHBoxLayout()
-        layout_translate_menu.addWidget(self.translated_label)
+        layout_translate_menu.addWidget(self.translation_lang_combobox)
         layout_translate_menu.addStretch()
         layout_translate_menu.addWidget(self.translate_button)
         layout_translate_menu.addStretch()
         layout_translate_menu.addWidget(self.auto_translate_checkbox)
 
         layout_toplevel = QVBoxLayout(central_widget)
+        layout_toplevel.addWidget(self.ocr_label)
         layout_toplevel.addLayout(layout_ocr_menu)
         layout_toplevel.addWidget(self.ocr_widget)
+        layout_toplevel.addWidget(self.translated_label)
         layout_toplevel.addLayout(layout_translate_menu)
         layout_toplevel.addWidget(self.translated_widget)
 
@@ -300,14 +310,16 @@ class MainWindow(QMainWindow):
         widget.setStyleSheet("")
 
     def ocr_image_selection(self):
-        self.ocr_text = self.graphics_view.ocr_selection()
+        self.ocr_text = self.graphics_view.ocr_selection(self.ocr_lang_combobox.currentText())
         self.ocr_text_history += self.ocr_text + "\n\n"
         self.ocr_widget.setPlainText(self.ocr_text)
         self.ocr_history_widget.setPlainText(self.ocr_text_history)
 
     def translate_text(self):
         if self.ocr_text:
-            self.translated_text = translate_text_deepl(self.ocr_text, config.DEEPL_KEY)
+            self.translated_text = st.translate.translate_text_deepl(self.ocr_text,
+                                                                     api_key=config.DEEPL_KEY,
+                                                                     target_lang=self.translation_lang_combobox.currentText())
             self.translated_text_history += self.translated_text + "\n\n"
             self.translated_widget.setPlainText(self.translated_text)
             self.translated_history_widget.setPlainText(self.translated_text_history)
@@ -351,11 +363,11 @@ class CustomGraphicsView(QGraphicsView):
         self.fit_in_view()
         self.selection_has_changed = self.has_selection_changed()
 
-    def ocr_selection(self) -> str:
+    def ocr_selection(self, lang:str = "") -> str:
         selection = self.get_selection_pixmap()
         if not selection.isNull():
             image = np.array(ImageQt.fromqpixmap(selection))  # Convert to numpy array that is compatible with tesseract
-            extracted_text = ocr_text(image, to_lang='eng', config=r'--psm 6')
+            extracted_text = st.ocr.ocr_text(image, to_lang=lang, config=r'--psm 6')
             return extracted_text
         return ""
 
@@ -369,7 +381,7 @@ class CustomGraphicsView(QGraphicsView):
         new = np.array(ImageQt.fromqpixmap(self.get_selection_pixmap()))
         if old.shape != new.shape:
             return True
-        similarity = get_image_similarity(old, new)
+        similarity = st.image_process.get_image_similarity(old, new)
         return similarity < threshold
 
     def get_selection_pixmap(self):
