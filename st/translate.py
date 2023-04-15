@@ -34,8 +34,13 @@ DEEPL_LANGUAGES = {
     "ZH": "Chinese (simplified)"
 }
 
+def get_available_deepl_languages(api_key: str) -> dict[str: str]:
+    if not api_key:
+        return {}
+    translator = deepl.Translator(api_key)
+    return {lang.code: lang.name for lang in translator.get_target_languages()}
 
-def translate_text_deepl(text: str, api_key: str, target_lang='DE'):
+def translate_text_deepl(text: str, api_key: str, target_lang='DE') -> str:
     translator = deepl.Translator(api_key)
     result = translator.translate_text(text, target_lang=target_lang)
     return result.text
