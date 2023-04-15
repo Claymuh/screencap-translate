@@ -398,12 +398,11 @@ class CustomGraphicsView(QGraphicsView):
         selected_image = self.image_item.pixmap()
         return selected_image.copy(self.rectangle.sceneBoundingRect().toAlignedRect())
 
-
 class SelectionRectangle(QGraphicsRectItem):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.handle = None
+        self.handles = []
 
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
         #self.setFlag(QGraphicsItem.ItemIsSelectable, True)
@@ -411,15 +410,29 @@ class SelectionRectangle(QGraphicsRectItem):
         self.setPen(QPen(Qt.black, 2))
 
     def add_handle(self, size=15):
-        xy = self.boundingRect().bottomRight()
-        self.handle = DragHandle(xy.x()-size/2, xy.y()-size/2, size, size, parent=self)
-        self.scene().addItem(self.handle)
+        # Bottom right handle
+        xy_br = self.boundingRect().bottomRight()
+        handle_br = DragHandle(xy_br.x()-size/2, xy_br.y()-size/2, size, size, parent=self)
+        self.handles.append(handle_br)
+        self.scene().addItem(handle_br)
+
+        # Top left handle
+        xy_tl = self.boundingRect().topLeft()
+        handle_tl = DragHandle(xy_tl.x()-size/2, xy_tl.y()-size/2, size, size, parent=self)
+        self.handles.append(handle_tl)
+        self.scene().addItem(handle_tl)
 
     def resize_to_handle_pos(self):
-        handle_pos = self.handle.sceneBoundingRect()
-        new_rect = QRectF(0, 0, 0, 0)
-        new_rect.setBottomRight(handle_pos.center() - self.scenePos())
-        self.setRect(new_rect)
+        for handle in self.handles:
+            handle_pos = handle.sceneBoundingRect()
+            new_rect = self.rect()
+
+            if handle == self.handles[0]:  # Bottom right handle
+                new_rect.setBottomRight(handle_pos.center() - self.scenePos())
+            elif handle == self.handles[1]:  # Top left handle
+                new_rect.setTopLeft(handle_pos.center() - self.scenePos())
+
+            self.setRect(new_rect)
 
 
 class DragHandle(QGraphicsRectItem):
