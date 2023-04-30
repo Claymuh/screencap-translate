@@ -414,13 +414,11 @@ class SelectionRectangle(QGraphicsRectItem):
         xy_br = self.boundingRect().bottomRight()
         handle_br = DragHandle(xy_br.x()-size/2, xy_br.y()-size/2, size, size, parent=self)
         self.handles.append(handle_br)
-        self.scene().addItem(handle_br)
 
         # Top left handle
         xy_tl = self.boundingRect().topLeft()
         handle_tl = DragHandle(xy_tl.x()-size/2, xy_tl.y()-size/2, size, size, parent=self)
         self.handles.append(handle_tl)
-        self.scene().addItem(handle_tl)
 
     def resize_to_handle_pos(self):
         for handle in self.handles:
