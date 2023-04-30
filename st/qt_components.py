@@ -321,6 +321,12 @@ class MainWindow(QMainWindow):
         self.ocr_widget.setPlainText(self.ocr_text)
         self.ocr_history_widget.setPlainText(self.ocr_text_history)
 
+    def ocr_image(self):
+        self.ocr_text = self.graphics_view.ocr_whole_pixmap(self.ocr_lang_combobox.currentText())
+        self.ocr_text_history += self.ocr_text + "\n\n"
+        self.ocr_widget.setPlainText(self.ocr_text)
+        self.ocr_history_widget.setPlainText(self.ocr_text_history)
+
     def translate_text(self):
         if self.ocr_text:
             self.translated_text = st.translate.translate_text_deepl(self.ocr_text,
@@ -333,6 +339,8 @@ class MainWindow(QMainWindow):
     def open_subwindow(self):
         screen = self.screen_list[self.screen_select_box.currentIndex()]
         self.subwindow = ScreenShotTool(screen)
+        self.subwindow.screenshot_taken_signal.connect(lambda x: self.graphics_view.update_pixmap(x))
+        self.subwindow.screenshot_taken_signal.connect(self.ocr_image)
 
 
 class CustomGraphicsView(QGraphicsView):
@@ -382,7 +390,12 @@ class CustomGraphicsView(QGraphicsView):
         self.fit_in_view()
         self.selection_has_changed = self.has_selection_changed()
 
-    def ocr_selection(self, lang:str = "") -> str:
+    def ocr_whole_pixmap(self, lang: str = "") -> str:
+        image = np.array(ImageQt.fromqpixmap(self.image_item.pixmap()))  # Convert to numpy array that is compatible with tesseract
+        extracted_text = st.ocr.ocr_text(image, to_lang=lang, config=r'--psm 6')
+        return extracted_text
+
+    def ocr_selection(self, lang: str = "") -> str:
         selection = self.get_selection_pixmap()
         if not selection.isNull():
             image = np.array(ImageQt.fromqpixmap(selection))  # Convert to numpy array that is compatible with tesseract
@@ -467,6 +480,8 @@ class DragHandle(QGraphicsRectItem):
 
 
 class ScreenShotTool(QWidget):
+    screenshot_taken_signal = Signal(QPixmap)
+
     def __init__(self, screen):
         super().__init__()
         self.screen: QScreen = screen
@@ -502,7 +517,7 @@ class ScreenShotTool(QWidget):
             self.update()
             QApplication.processEvents()
             screenshot = self.screen.grabWindow(0, rect.x(), rect.y(), rect.width(), rect.height())
-            screenshot.save('screenshot.png', 'png')
+            self.screenshot_taken_signal.emit(screenshot)
             self.close()
 
     def paintEvent(self, event):
