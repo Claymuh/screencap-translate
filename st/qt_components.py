@@ -494,6 +494,7 @@ class ScreenShotTool(QWidget):
         self.end = None
 
     def initUI(self):
+        self.setWindowState(Qt.WindowState.WindowActive)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Dialog)
         self.setWindowState(self.windowState() | Qt.WindowFullScreen)
         self.setGeometry(self.screen.geometry())
