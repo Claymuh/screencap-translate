@@ -1,8 +1,8 @@
 import threading
 
 from PIL import ImageQt
-from PySide6.QtCore import Qt, QRectF, Signal, QTimer
-from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen, QWheelEvent
+from PySide6.QtCore import Qt, QRectF, Signal, QTimer, QRect
+from PySide6.QtGui import QPen, QBrush, QColor, QPainter, QPixmap, QAction, QTransform, QScreen, QWheelEvent, QPalette
 from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QWidget, QVBoxLayout, QSlider, \
     QMenuBar, QFileDialog, QPlainTextEdit, QHBoxLayout, QLabel, QPushButton, QSplitter, QComboBox, \
     QGridLayout, QDoubleSpinBox, QGraphicsRectItem, QGraphicsItem, QCheckBox
@@ -86,6 +86,11 @@ class MainWindow(QMainWindow):
         self.always_on_top_action.setCheckable(True)
         self.always_on_top_action.triggered.connect(self.toggle_always_on_top)
         self.window_menu.addAction(self.always_on_top_action)
+
+        # Always on top menu entry
+        self.screenshot_overlay_action = QAction("Overlay", self)
+        self.screenshot_overlay_action.triggered.connect(self.open_subwindow)
+        self.window_menu.addAction(self.screenshot_overlay_action)
 
     def set_up_left_widget(self):
 
@@ -325,6 +330,10 @@ class MainWindow(QMainWindow):
             self.translated_widget.setPlainText(self.translated_text)
             self.translated_history_widget.setPlainText(self.translated_text_history)
 
+    def open_subwindow(self):
+        screen = self.screen_list[self.screen_select_box.currentIndex()]
+        self.subwindow = ScreenShotTool(screen)
+
 
 class CustomGraphicsView(QGraphicsView):
     def __init__(self, parent=None):
@@ -455,3 +464,50 @@ class DragHandle(QGraphicsRectItem):
         if event.button() == Qt.LeftButton:
             self.setBrush(QColor(255, 255, 0))
         super().mouseReleaseEvent(event)
+
+
+class ScreenShotTool(QWidget):
+    def __init__(self, screen):
+        super().__init__()
+        self.screen: QScreen = screen
+        self.initUI()
+        self.start = None
+        self.end = None
+
+    def initUI(self):
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Dialog)
+        self.setWindowState(self.windowState() | Qt.WindowFullScreen)
+        self.setGeometry(self.screen.geometry())
+        self.setWindowOpacity(0.1);
+        self.setStyleSheet("QWidget{background: #0000AA}")
+        self.show()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            self.close()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.start = event.pos()
+
+    def mouseMoveEvent(self, event):
+        if self.start is not None:
+            self.end = event.pos()
+            self.update()
+
+    def mouseReleaseEvent(self, event):
+        if self.start is not None and self.end is not None:
+            rect = QRect(self.start, self.end).normalized()
+            self.setWindowOpacity(0.0)
+            self.update()
+            QApplication.processEvents()
+            screenshot = self.screen.grabWindow(0, rect.x(), rect.y(), rect.width(), rect.height())
+            screenshot.save('screenshot.png', 'png')
+            self.close()
+
+    def paintEvent(self, event):
+        if self.start is not None and self.end is not None:
+            painter = QPainter(self)
+            painter.setPen(QPen(Qt.red, 2, Qt.DashLine))
+            painter.setBrush(Qt.transparent)
+            painter.drawRect(QRect(self.start, self.end))
