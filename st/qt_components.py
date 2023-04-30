@@ -19,6 +19,7 @@ class MainWindow(QMainWindow):
     take_screenshot_signal = Signal()
     ocr_signal = Signal()
     translate_signal = Signal()
+    open_overlay_window_signal = Signal()
 
     def __init__(self):
         super().__init__()
@@ -37,11 +38,13 @@ class MainWindow(QMainWindow):
 
         self.timers = {}  # Ephemeral timers for temporary highlighting, etc.
 
-        # Start the global hotkeys listener thread
         self.take_screenshot_signal.connect(self.take_screenshot)
         #self.take_screenshot_signal.connect(self.bring_to_foreground)
         self.ocr_signal.connect(self.ocr_image_selection)
         self.translate_signal.connect(self.translate_text)
+        self.open_overlay_window_signal.connect(self.open_subwindow)
+
+        # Start the global hotkeys listener thread
         self.listener = threading.Thread(target=self.set_up_hotkeys)
         self.listener.daemon = True
         self.listener.start()
@@ -89,7 +92,7 @@ class MainWindow(QMainWindow):
 
         # Always on top menu entry
         self.screenshot_overlay_action = QAction("Overlay", self)
-        self.screenshot_overlay_action.triggered.connect(self.open_subwindow)
+        self.screenshot_overlay_action.triggered.connect(self.open_overlay_window_signal)
         self.window_menu.addAction(self.screenshot_overlay_action)
 
     def set_up_left_widget(self):
@@ -236,7 +239,8 @@ class MainWindow(QMainWindow):
         with keyboard.GlobalHotKeys(
                 {config.HOTKEY_SCREENSHOT: self.take_screenshot_signal.emit,
                  config.HOTKEY_OCR: self.ocr_signal.emit,
-                 config.HOTKEY_TRANSLATE: self.translate_signal.emit}
+                 config.HOTKEY_TRANSLATE: self.translate_signal.emit,
+                 config.HOTKEY_OVERLAY: self.open_overlay_window_signal.emit}
         ) as hk:
             hk.join()
 
