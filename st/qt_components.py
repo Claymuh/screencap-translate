@@ -156,7 +156,7 @@ class MainWindow(QMainWindow):
     def set_up_central_widget(self):
         # Set up OCR text edit widget
         self.ocr_widget = QPlainTextEdit(self.central_widget)
-        self.ocr_widget.setReadOnly(True)
+        #self.ocr_widget.setReadOnly(True)
 
         # Set up translated text edit widget
         self.translated_widget = QPlainTextEdit(self.central_widget)
@@ -332,8 +332,8 @@ class MainWindow(QMainWindow):
         self.ocr_history_widget.setPlainText(self.ocr_text_history)
 
     def translate_text(self):
-        if self.ocr_text:
-            self.translated_text = st.translate.translate_text_deepl(self.ocr_text,
+        if self.ocr_widget.toPlainText():
+            self.translated_text = st.translate.translate_text_deepl(self.ocr_widget.toPlainText(),
                                                                      api_key=config.DEEPL_KEY,
                                                                      target_lang=self.translation_lang_combobox.currentText())
             self.translated_text_history += self.translated_text + "\n\n"
