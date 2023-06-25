@@ -345,6 +345,7 @@ class MainWindow(QMainWindow):
         self.subwindow = ScreenShotTool(screen)
         self.subwindow.screenshot_taken_signal.connect(lambda x: self.graphics_view.update_pixmap(x))
         self.subwindow.screenshot_taken_signal.connect(self.ocr_image)
+        self.subwindow.screenshot_taken_signal.connect(self.translate_text)
 
 
 class CustomGraphicsView(QGraphicsView):
